@@ -134,10 +134,52 @@ if ! "$PYTHON" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 11)
 fi
 ok "Python $PYVER"
 
-if ! "$PYTHON" -c 'import venv, ensurepip' >/dev/null 2>&1; then
-    die "the venv module is missing. Debian/Ubuntu: apt-get install -y python3-venv"
+venv_ready() { "$PYTHON" -c 'import venv, ensurepip' >/dev/null 2>&1; }
+
+install_venv_support() {
+    local sudo=""
+    if [ "$(id -u)" -ne 0 ]; then
+        command -v sudo >/dev/null 2>&1 || return 1
+        sudo="sudo"
+    fi
+
+    if command -v apt-get >/dev/null 2>&1; then
+        $sudo apt-get update -qq && $sudo apt-get install -y -qq python3-venv python3-pip
+    elif command -v dnf >/dev/null 2>&1; then
+        $sudo dnf install -y -q python3-pip
+    elif command -v apk >/dev/null 2>&1; then
+        $sudo apk add --no-cache python3 py3-pip
+    elif command -v pacman >/dev/null 2>&1; then
+        $sudo pacman -Sy --noconfirm python-pip
+    else
+        return 1
+    fi
+}
+
+if venv_ready; then
+    ok "venv module available"
+else
+    warn "python3-venv is not installed, so .venv cannot be created"
+    if [ -t 0 ] && [ -t 1 ]; then
+        printf '  Install it now? [Y/n]: '
+        read -r REPLY || true
+        case "${REPLY:-y}" in
+            [Yy]*)
+                step "Installing python3-venv"
+                if install_venv_support && venv_ready; then
+                    ok "venv module available"
+                else
+                    die "could not install it automatically. Run: apt-get install -y python3-venv python3-pip"
+                fi
+                ;;
+            *)
+                die "install it first: apt-get install -y python3-venv python3-pip   then re-run ./setup.sh"
+                ;;
+        esac
+    else
+        die "install it first: apt-get install -y python3-venv python3-pip   then re-run ./setup.sh"
+    fi
 fi
-ok "venv module available"
 
 # ------------------------------------------------------------------------ lxd
 step "Checking LXD"
