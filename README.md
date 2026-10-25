@@ -33,14 +33,34 @@ passwords encrypted at rest.
 
 ## Install
 
+On Debian/Ubuntu with LXD already set up (`snap install lxd && sudo lxd init`),
+run the installer. It creates `.env` and `.venv`, installs dependencies, checks
+LXD and the storage pool, and offers to install a systemd unit:
+
 ```bash
 git clone <your-repo> cloudbox && cd cloudbox
-python -m venv .venv && . .venv/bin/activate     # Windows: .venv\Scripts\activate
+chmod +x setup.sh
+./setup.sh                 # asks before touching systemd
+./setup.sh --systemd       # unattended: also install + start the service
+./setup.sh --test          # install, then run the offline smoke test
+```
+
+`setup.sh` is idempotent: it never overwrites an existing `.env` or `.venv`, and
+it only prompts for a token, guild and owner ID when those are still blank. Run
+`./setup.sh --help` for every flag.
+
+### Manual install
+
+```bash
+git clone <your-repo> cloudbox && cd cloudbox
+python3 -m venv .venv && . .venv/bin/activate     # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 cp .env.example .env
 $EDITOR .env
 python run.py
 ```
+
+On Windows, use `copy .env.example .env` and run `.\.venv\Scripts\python.exe run.py`.
 
 Minimum `.env`:
 
